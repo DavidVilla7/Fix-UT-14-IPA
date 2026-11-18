@@ -46,15 +46,15 @@ jobs:
       - name: Build the minimal ARMv7 dylib
         run: make -C toolchain-smoke
 
-      - name: Verify the linked architecture
+      - name: Verify the linked device dylib
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist
-          dylib="$(find toolchain-smoke -type f -name 'LinkerSmoke.dylib' -print -quit)"
+          dylib="$(find toolchain-smoke/.theos/obj -path '*/.dSYM' -prune -o -type f -name 'LinkerSmoke.dylib' -print -quit)"
           test -n "$dylib"
           file "$dylib" | tee dist/linker-report.txt
-          grep -E 'Mach-O.*(arm|ARM)' dist/linker-report.txt
+          grep -E 'Mach-O.*armv7.*dynamically linked shared library' dist/linker-report.txt
           cp "$dylib" dist/LinkerSmoke.dylib
 
       - name: Upload the linked dylib and report
