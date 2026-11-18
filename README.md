@@ -1,30 +1,32 @@
 # FIFA 14 iOS Local Ultimate Team
 
-Work-in-progress revival for the installed FIFA 14 iOS app on a jailbroken iOS 10.3.3 device.
+Work-in-progress local revival for the installed FIFA 14 iOS app on a jailbroken iOS 10.3.3 device.
 
-## Requirements
+## Goal
 
-- Keep all gameplay state and services on the iPhone.
+- Keep gameplay state and services on the iPhone.
 - Do not depend on a PC, LAN host, or EA service.
-- Use the PC FUT project only as a reference for protocol and data behavior.
-- First pass: get past the retired Origin login and create a persistent local club.
-- Later pass: add a local market and a large coin balance using the mobile title's own card data.
+- Use the PC FUT project only as a protocol/data reference.
+- First milestone: bypass the retired Origin/anonymous-login gate and preserve a local club.
+- Later milestone: implement an on-device market and local coin/card inventory using FIFA 14's own mobile data.
 
 ## Reverse-engineering notes
 
-- The installed executable is a 32-bit ARMv7 Mach-O.
-- The log reaches `accounts.ea.com/connect/upidtoken` and fails with HTTP 400; FUT REST requests are not reached yet.
-- The binary contains the Nimble anonymous/origin authenticators and the FUT REST paths.
-- The app bundle includes `data/cmn/fut.db` and `data/cmn/fifa.db`; these are EA's custom database format, not SQLite.
-- Nimble persistence already has an anonymous ID, but that alone does not pass the legacy authentication flow.
+- The supplied FIFA14 executable is a 32-bit ARMv7 Mach-O. The universal tweak contains ARMv7 and ARM64 slices so it can inject into the correct process on 64-bit hardware.
+- The supplied Nimble.log reaches `accounts.ea.com/connect/upidtoken`; the retired endpoint responds HTTP 400 before any FUT REST requests are reached.
+- Objective-C metadata in the supplied executable identifies `NimbleAuthenticatorAnonymous`, `NimbleIdentityAuthenticatorBase`, `NimbleOriginCore`, and `NimbleOriginWebController`. The previous 0.6 package mistakenly targeted a nonexistent `NimbleAuthenticatorOrigin` class.
+- The 0.7 experiment suppresses the anonymous UPID login request, reports a local authenticated state, and adds low-level startup logging to app Documents plus fallback log paths. The device runtime result is still unverified.
+- The app includes `data/cmn/fut.db` and `data/cmn/fifa.db`; these are EA custom database formats, not SQLite.
+- The PC FUT project is a separate service/client restoration. This iOS project does not run or require that PC server.
 
-## Build notes
+## Build and release
 
-- A pinned Theos/Linux ARMv7 toolchain successfully linked a minimal ARMv7 Mach-O dynamic library in GitHub Actions. The artifact was checked with `file` and reported `Mach-O armv7 dynamically linked shared library`.
-- The Theos-patched 9.3 and 10.3 SDK archives contain simulator architecture metadata; the 9.3 link failed on a missing `liblaunch.dylib`. The smoke build now uses an older device SDK archive with traditional device libraries.
-- The smoke artifact is only proof of a working linker path. It is not a FIFA tweak and has not been installed on the phone.
-- Next build step is a small in-process hook to replace the dead Origin login result with a locally persisted club identity; no server will run on a separate computer.
+The GitHub Actions workflow builds a universal ARMv7/ARM64 tweak using a pinned Theos/Linux toolchain, verifies the package architecture, and can publish an experimental pre-release when manually dispatched.
 
-Theos' Linux guide recommends SDK 9.2 or earlier: https://github.com/theos/theos/wiki/Installation. The upstream SDK issue records the simulator-stub problem: https://github.com/theos/sdks/issues/56. A recent ARMv7 device build documents the legacy SDK/ld64 approach: https://openrevive.org/guides/theos-ios6-apple-silicon.html.
+No release should be treated as a working revival until its runtime behavior has been verified on-device. The next device check is whether version 0.7 creates `Documents/FIFA14LocalUT.log` and whether the Origin screen advances. If it does not, fallback log output and runtime selector checks are included to separate Substrate injection failure from hook failure.
 
-No tweak or package is implemented yet. This repository tracks source, reverse-engineering notes, and reproducible build artifacts only; proprietary FIFA app files and user logs will not be committed.
+## Limitations
+
+This project is experimental. It does not yet implement a local FUT service, a working market, a generated club save, or market inventory. It does not include proprietary FIFA app files or user logs.
+
+Theos toolchain context: https://github.com/theos/theos/wiki/Installation
