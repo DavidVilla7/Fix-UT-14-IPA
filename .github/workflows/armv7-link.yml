@@ -69,18 +69,18 @@ jobs:
           test "$(dpkg-deb --field "$deb" Package)" = "com.davidvilla7.fifa14localut"
           test "$(dpkg-deb --field "$deb" Architecture)" = "iphoneos-arm"
           dpkg-deb --contents "$deb" | tee dist/deb-contents.txt
-          cp "$deb" dist/FIFA14LocalUT_0.1.0_iphoneos-arm.deb
+          cp "$deb" dist/FIFA14LocalUT_0.2.0_iphoneos-arm.deb
 
       - name: Publish experimental pre-release
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.1.0 \
+          gh release create v0.2.0 \
             --prerelease \
-            --title "FIFA 14 Local UT 0.1.0 (experimental)" \
-            --notes "Experimental ARMv7 MobileSubstrate tweak for FIFA 14 iOS. This package changes the anonymous Nimble identity state to pass the observed Origin authentication gate. It has built successfully, but has NOT been validated on a physical iOS 10.3.3 device and does not provide a local FUT service, market database, or guaranteed offline progression. Back up the app data before installing. Package target: jailbroken 32-bit iOS with MobileSubstrate." \
-            dist/FIFA14LocalUT_0.1.0_iphoneos-arm.deb
+            --title "FIFA 14 Local UT 0.2.0 (experimental)" \
+            --notes "Experimental ARMv7 MobileSubstrate tweak for FIFA 14 iOS. This package changes the Origin authenticator login callback to return a local empty success result. It has built successfully, but has NOT been validated on a physical iOS 10.3.3 device and does not provide a local FUT service, market database, or guaranteed offline progression. Back up the app data before installing. Package target: jailbroken 32-bit iOS with MobileSubstrate." \
+            dist/FIFA14LocalUT_0.2.0_iphoneos-arm.deb
 
       - name: Upload the package and build report
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
