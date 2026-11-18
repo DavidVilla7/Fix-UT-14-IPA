@@ -36,7 +36,7 @@ jobs:
             https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz \
             | tar -xJf - -C "$THEOS/toolchain"
           curl --fail --location --retry 3 \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS10.3.sdk.tar.xz \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS9.3.sdk.tar.xz \
             | tar -xJf - -C "$THEOS/sdks"
 
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          dylib="$(find toolchain-smoke/.theos/obj -path '*/.dSYM' -prune -o -type f -name 'LinkerSmoke.dylib' -print -quit)"
+          dylib="$(find toolchain-smoke/.theos/obj -type d -name '*.dSYM' -prune -o -type f -name 'LinkerSmoke.dylib' -print -quit)"
           test -n "$dylib"
           file "$dylib" | tee dist/linker-report.txt
           grep -E 'Mach-O.*armv7.*dynamically linked shared library' dist/linker-report.txt
