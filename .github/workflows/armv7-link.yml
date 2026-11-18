@@ -80,18 +80,18 @@ jobs:
           file "$RUNNER_TEMP/package-check/$dylib_path" | tee dist/tweak-architecture.txt
           grep -q 'armv7' dist/tweak-architecture.txt
           grep -q 'arm64' dist/tweak-architecture.txt
-          cp "$deb" dist/FIFA14LocalUT_0.6.0_iphoneos-arm.deb
+          cp "$deb" dist/FIFA14LocalUT_0.7.0_iphoneos-arm.deb
 
       - name: Publish experimental pre-release
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.6.0 \
+          gh release create v0.7.0 \
             --prerelease \
-            --title "FIFA 14 Local UT 0.6.0 (universal experimental)" \
-            --notes "Universal ARMv7 and ARM64 diagnostic MobileSubstrate tweak for FIFA 14 iOS. The supplied FIFA executable is a 32-bit ARMv7 process, even on 64-bit devices; this build contains both ARMv7 and ARM64 slices. It records tweak-load and Origin flow events to the app's Documents/FIFA14LocalUT.log while retaining the experimental Origin callback bypass. This package is build-verified but not yet confirmed loading on a physical device, and it does not provide a local FUT service or market database. Back up app data before installing." \
-            dist/FIFA14LocalUT_0.6.0_iphoneos-arm.deb
+            --title "FIFA 14 Local UT 0.7.0 (universal experimental)" \
+            --notes "Experimental on-device MobileSubstrate tweak for FIFA 14 iOS. The game process is 32-bit ARMv7 even on 64-bit devices; the dylib includes ARMv7 and ARM64 slices. This build targets the Nimble classes and selectors verified in the supplied game executable, suppresses the retired anonymous UPID login request, and reports a local-authenticated state to the app. It writes a startup/runtime log to the app Documents folder and fallback log paths. Package/build are verified; runtime bypass is not yet confirmed on a physical device. This is not yet a local FUT service or market database. Back up app data before installing." \
+            dist/FIFA14LocalUT_0.7.0_iphoneos-arm.deb
 
       - name: Upload the package and build report
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
