@@ -1,8 +1,8 @@
 Package: com.davidvilla7.fifa14localut
-Name: FIFA 14 Local UT (Experimental)
-Version: 0.2.0
+Name: FIFA 14 Local UT (Diagnostic)
+Version: 0.3.0
 Architecture: iphoneos-arm
-Description: Experimental local Origin-login bypass for FIFA 14 iOS.
+Description: Experimental Origin bypass with on-device hook diagnostics.
 Maintainer: DavidVilla7
 Author: DavidVilla7
 Section: Tweaks
