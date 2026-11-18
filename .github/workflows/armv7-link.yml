@@ -1,9 +1,10 @@
-name: ARMv7 iOS linker smoke
+name: ARMv7 iOS linker and tweak package
 
 on:
   push:
     paths:
       - "toolchain-smoke/**"
+      - "local-ut/**"
       - ".github/workflows/armv7-link.yml"
   workflow_dispatch:
 
@@ -11,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  link-armv7:
+  build-armv7:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out source
@@ -20,7 +21,7 @@ jobs:
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot file git libncurses6 libtinfo6 perl python3 unzip xz-utils
+          sudo apt-get install -y dpkg-dev fakeroot file git libncurses6 libtinfo6 perl python3 unzip xz-utils
 
       - name: Install pinned Theos and ARMv7 iOS toolchain
         shell: bash
@@ -45,10 +46,13 @@ jobs:
           find "$THEOS/toolchain" -type f \( -name 'ld64*' -o -name 'ld' \) -print
           echo "THEOS=$THEOS" >> "$GITHUB_ENV"
 
-      - name: Build the minimal ARMv7 dylib
+      - name: Build the ARMv7 linker smoke sample
         run: make -C toolchain-smoke
 
-      - name: Verify the linked device dylib
+      - name: Build experimental FIFA 14 tweak package
+        run: make -C local-ut package
+
+      - name: Verify and stage the package
         shell: bash
         run: |
           set -euo pipefail
@@ -59,8 +63,16 @@ jobs:
           grep -E 'Mach-O.*armv7.*dynamically linked shared library' dist/linker-report.txt
           cp "$dylib" dist/LinkerSmoke.dylib
 
-      - name: Upload the linked dylib and report
+          deb="$(find local-ut -type f -name '*.deb' -print -quit)"
+          test -n "$deb"
+          dpkg-deb --info "$deb"
+          test "$(dpkg-deb --field "$deb" Package)" = "com.davidvilla7.fifa14localut"
+          test "$(dpkg-deb --field "$deb" Architecture)" = "iphoneos-arm"
+          dpkg-deb --contents "$deb" | tee dist/deb-contents.txt
+          cp "$deb" dist/FIFA14LocalUT_0.1.0_iphoneos-arm.deb
+
+      - name: Upload the package and build report
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
         with:
-          name: armv7-linker-smoke
+          name: fifa14-local-ut-experimental-deb
           path: dist/
