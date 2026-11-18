@@ -1,8 +1,8 @@
 Package: com.davidvilla7.fifa14localut
 Name: FIFA 14 Local UT (Diagnostic)
-Version: 0.4.0
+Version: 0.5.0
 Architecture: iphoneos-arm
-Description: Origin bypass with Logos hook initialization and diagnostics.
+Description: ARM64 Origin bypass with Logos hook initialization and diagnostics.
 Maintainer: DavidVilla7
 Author: DavidVilla7
 Section: Tweaks
