@@ -72,8 +72,8 @@ static void FUTReportMethod(const char *className, const char *selectorName) {
 
 - (int)getState {
     int state = %orig;
-    FUTLog([NSString stringWithFormat:@"Nimble authenticator getState -> %d", state]);
-    return state;
+    FUTLog([NSString stringWithFormat:@"Nimble authenticator getState was %d; reporting local-authenticated state 3", state]);
+    return 3;
 }
 
 %end
