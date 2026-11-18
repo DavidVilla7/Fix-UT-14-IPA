@@ -4,6 +4,7 @@ typedef void (^NimbleLoginCompletion)(id result, id error);
 
 static void FUTLog(NSString *message) {
     @autoreleasepool {
+        NSLog(@"[FIFA14LocalUT] %@", message);
         NSString *documents = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"];
         NSString *path = [documents stringByAppendingPathComponent:@"FIFA14LocalUT.log"];
         NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], message];
@@ -68,5 +69,7 @@ static void FUTLog(NSString *message) {
 %end
 
 %ctor {
-    FUTLog(@"Tweak loaded into FIFA14");
+    FUTLog(@"Tweak constructor entered");
+    %init;
+    FUTLog(@"Logos hooks initialized");
 }
