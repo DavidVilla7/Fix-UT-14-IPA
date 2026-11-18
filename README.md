@@ -15,7 +15,7 @@ Work-in-progress local revival for the installed FIFA 14 iOS app on a jailbroken
 - The supplied FIFA14 executable is a 32-bit ARMv7 Mach-O. The universal tweak contains ARMv7 and ARM64 slices so it can inject into the correct process on 64-bit hardware.
 - The supplied Nimble.log reaches `accounts.ea.com/connect/upidtoken`; the retired endpoint responds HTTP 400 before any FUT REST requests are reached.
 - Objective-C metadata in the supplied executable identifies `NimbleAuthenticatorAnonymous`, `NimbleIdentityAuthenticatorBase`, `NimbleOriginCore`, and `NimbleOriginWebController`. The previous 0.6 package mistakenly targeted a nonexistent `NimbleAuthenticatorOrigin` class.
-- The 0.7 experiment suppresses the anonymous UPID login request, reports a local authenticated state, and adds low-level startup logging to app Documents plus fallback log paths. The device runtime result is still unverified.
+- The 0.7 device log proved tweak injection and showed Origin readiness/status reads followed by authenticator state 1 reads, without any state transition. Version 0.8 commits authenticator state 3 and Origin status 3, and traces Identity/Synergy login callbacks to the app Documents log. Its on-device result is still unverified.
 - The app includes `data/cmn/fut.db` and `data/cmn/fifa.db`; these are EA custom database formats, not SQLite.
 - The PC FUT project is a separate service/client restoration. This iOS project does not run or require that PC server.
 
