@@ -20,7 +20,7 @@ jobs:
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot file git libncurses6 libtinfo6 perl python3 xz-utils
+          sudo apt-get install -y fakeroot file git libncurses6 libtinfo6 perl python3 unzip xz-utils
 
       - name: Install pinned Theos and ARMv7 iOS toolchain
         shell: bash
@@ -36,10 +36,12 @@ jobs:
             https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz \
             | tar -xJf - -C "$THEOS/toolchain"
           curl --fail --location --retry 3 \
-            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS9.3.sdk.tar.xz \
-            | tar -xJf - -C "$THEOS/sdks"
+            --output "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" \
+            https://github.com/growtopiajaw/iPhoneOS-SDK/releases/download/v1.0/iPhoneOS6.1.sdk.zip
+          unzip -q "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" -d "$THEOS/sdks"
 
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
+          test -d "$THEOS/sdks/iPhoneOS6.1.sdk"
           find "$THEOS/toolchain" -type f \( -name 'ld64*' -o -name 'ld' \) -print
           echo "THEOS=$THEOS" >> "$GITHUB_ENV"
 
