@@ -3,5 +3,8 @@
         Bundles = (
             "com.ea.fifa14.inc"
         );
+        Executables = (
+            "FIFA14"
+        );
     };
 }
