@@ -1,0 +1,64 @@
+name: ARMv7 iOS linker smoke
+
+on:
+  push:
+    paths:
+      - "toolchain-smoke/**"
+      - ".github/workflows/armv7-link.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  link-armv7:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot file git libncurses6 libtinfo6 perl python3 xz-utils
+
+      - name: Install pinned Theos and ARMv7 iOS toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          export THEOS="$RUNNER_TEMP/theos"
+          git clone https://github.com/theos/theos.git "$THEOS"
+          git -C "$THEOS" checkout 8167f59de02fd32cf45b16bfcb1330dfa5c9974c
+          git -C "$THEOS" submodule update --init --depth 1
+
+          mkdir -p "$THEOS/toolchain" "$THEOS/sdks"
+          curl --fail --location --retry 3 \
+            https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz \
+            | tar -xJf - -C "$THEOS/toolchain"
+          curl --fail --location --retry 3 \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS10.3.sdk.tar.xz \
+            | tar -xJf - -C "$THEOS/sdks"
+
+          test -x "$THEOS/toolchain/linux/iphone/bin/clang"
+          test -x "$THEOS/toolchain/linux/iphone/bin/ld64"
+          echo "THEOS=$THEOS" >> "$GITHUB_ENV"
+
+      - name: Build the minimal ARMv7 dylib
+        run: make -C toolchain-smoke
+
+      - name: Verify the linked architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          dylib="$(find toolchain-smoke -type f -name 'LinkerSmoke.dylib' -print -quit)"
+          test -n "$dylib"
+          file "$dylib" | tee dist/linker-report.txt
+          grep -E 'Mach-O.*(arm|ARM)' dist/linker-report.txt
+          cp "$dylib" dist/LinkerSmoke.dylib
+
+      - name: Upload the linked dylib and report
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
+        with:
+          name: armv7-linker-smoke
+          path: dist/
