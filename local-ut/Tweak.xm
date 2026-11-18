@@ -72,8 +72,12 @@ static void FUTReportMethod(const char *className, const char *selectorName) {
 
 - (int)getState {
     int state = %orig;
-    FUTLog([NSString stringWithFormat:@"Nimble authenticator getState was %d; reporting local-authenticated state 3", state]);
-    return 3;
+    if (state != 3) {
+        FUTLog([NSString stringWithFormat:@"Nimble authenticator state %d -> 3; committing local-authenticated state", state]);
+        [self setState:3];
+        state = %orig;
+    }
+    return state;
 }
 
 %end
@@ -110,12 +114,58 @@ static void FUTReportMethod(const char *className, const char *selectorName) {
 
 - (int)getLoginStatus {
     int status = %orig;
-    FUTLog([NSString stringWithFormat:@"Origin getLoginStatus was %d; reporting local-ready status 3", status]);
-    return 3;
+    if (status != 3) {
+        FUTLog([NSString stringWithFormat:@"Origin login status %d -> 3; committing local-ready state", status]);
+        [self updateStatus:3];
+        status = %orig;
+    }
+    return status;
 }
 
 - (void)loadOrigin {
     FUTLog(@"Origin loadOrigin suppressed for offline mode");
+}
+
+- (void)updateStatus:(int)status {
+    FUTLog([NSString stringWithFormat:@"Origin updateStatus:%d", status]);
+    %orig(status);
+}
+
+- (id)getAuthentications {
+    id value = %orig;
+    FUTLog([NSString stringWithFormat:@"Origin getAuthentications -> %@", value]);
+    return value;
+}
+
+- (void)showView:(int)view {
+    FUTLog([NSString stringWithFormat:@"Origin showView:%d", view]);
+    %orig(view);
+}
+
+%end
+
+%hook NimbleIdentityImpl
+
+- (id)getLoggedInAuthenticators {
+    id result = %orig;
+    FUTLog([NSString stringWithFormat:@"Identity getLoggedInAuthenticators -> %@", result]);
+    return result;
+}
+
+- (void)onAuthenticatorStateChange:(id)authenticator {
+    FUTLog([NSString stringWithFormat:@"Identity onAuthenticatorStateChange:%@", authenticator]);
+    %orig(authenticator);
+}
+
+%end
+
+%hook NimbleSynergyIdManagerImpl
+
+- (id)loginWithSynergyId:(id)synergyId withAuthenticator:(id)authenticator {
+    FUTLog([NSString stringWithFormat:@"Synergy login requested: id=%@ authenticator=%@", synergyId, authenticator]);
+    id result = %orig(synergyId, authenticator);
+    FUTLog([NSString stringWithFormat:@"Synergy login returned: %@", result]);
+    return result;
 }
 
 %end
@@ -154,6 +204,8 @@ static void FUTReportMethod(const char *className, const char *selectorName) {
     FUTReportMethod("NimbleIdentityAuthenticatorBase", "getState");
     FUTReportMethod("NimbleAuthenticatorAnonymous", "autoLogin");
     FUTReportMethod("NimbleOriginCore", "getLoginStatus");
+    FUTReportMethod("NimbleIdentityImpl", "getLoggedInAuthenticators");
+    FUTReportMethod("NimbleSynergyIdManagerImpl", "loginWithSynergyId:withAuthenticator:");
     FUTReportMethod("NimbleOriginWebController", "loadBootstrap");
     %init;
     FUTLog(@"Logos hooks initialized");
