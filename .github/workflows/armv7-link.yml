@@ -74,7 +74,7 @@ jobs:
           test "$(dpkg-deb --field "$deb" Package)" = "com.davidvilla7.fifa14localut"
           test "$(dpkg-deb --field "$deb" Architecture)" = "iphoneos-arm"
           dpkg-deb --contents "$deb" | tee dist/deb-contents.txt
-          dylib_path="$(dpkg-deb --contents "$deb" | awk '/FIFA14LocalUT\.dylib$/ {print $NF; exit}')"
+          dylib_path="$(dpkg-deb --contents "$deb" | awk '/FIFA14LocalUT\.dylib$/ && path == "" {path=$NF} END {print path}')"
           test -n "$dylib_path"
           dpkg-deb --extract "$deb" "$RUNNER_TEMP/package-check"
           file "$RUNNER_TEMP/package-check/$dylib_path" | tee dist/tweak-architecture.txt
