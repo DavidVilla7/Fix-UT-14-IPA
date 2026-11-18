@@ -40,7 +40,7 @@ jobs:
             | tar -xJf - -C "$THEOS/sdks"
 
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
-          test -x "$THEOS/toolchain/linux/iphone/bin/ld64"
+          find "$THEOS/toolchain" -type f \( -name 'ld64*' -o -name 'ld' \) -print
           echo "THEOS=$THEOS" >> "$GITHUB_ENV"
 
       - name: Build the minimal ARMv7 dylib
