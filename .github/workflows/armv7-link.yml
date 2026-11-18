@@ -1,4 +1,4 @@
-name: ARMv7 iOS linker and tweak package
+name: ARM64 iOS linker and tweak package
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  build-armv7:
+  build-arm64:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out source
@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dpkg-dev fakeroot file git libncurses6 libtinfo6 perl python3 unzip xz-utils
 
-      - name: Install pinned Theos and ARMv7 iOS toolchain
+      - name: Install pinned Theos and iOS toolchains
         shell: bash
         run: |
           set -euo pipefail
@@ -40,16 +40,20 @@ jobs:
             --output "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" \
             https://github.com/growtopiajaw/iPhoneOS-SDK/releases/download/v1.0/iPhoneOS6.1.sdk.zip
           unzip -q "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" -d "$THEOS/sdks"
+          curl --fail --location --retry 3 \
+            https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS9.3.sdk.tar.xz \
+            | tar -xJf - -C "$THEOS/sdks"
 
           test -x "$THEOS/toolchain/linux/iphone/bin/clang"
           test -d "$THEOS/sdks/iPhoneOS6.1.sdk"
+          test -d "$THEOS/sdks/iPhoneOS9.3.sdk"
           find "$THEOS/toolchain" -type f \( -name 'ld64*' -o -name 'ld' \) -print
           echo "THEOS=$THEOS" >> "$GITHUB_ENV"
 
       - name: Build the ARMv7 linker smoke sample
         run: make -C toolchain-smoke
 
-      - name: Build experimental FIFA 14 tweak package
+      - name: Build experimental FIFA 14 ARM64 tweak package
         run: make -C local-ut package
 
       - name: Verify and stage the package
@@ -57,11 +61,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          dylib="$(find toolchain-smoke/.theos/obj -type d -name '*.dSYM' -prune -o -type f -name 'LinkerSmoke.dylib' -print -quit)"
-          test -n "$dylib"
-          file "$dylib" | tee dist/linker-report.txt
+          smoke="$(find toolchain-smoke/.theos/obj -type d -name '*.dSYM' -prune -o -type f -name 'LinkerSmoke.dylib' -print -quit)"
+          test -n "$smoke"
+          file "$smoke" | tee dist/linker-report.txt
           grep -E 'Mach-O.*armv7.*dynamically linked shared library' dist/linker-report.txt
-          cp "$dylib" dist/LinkerSmoke.dylib
+          cp "$smoke" dist/LinkerSmoke.dylib
 
           deb="$(find local-ut -type f -name '*.deb' -print -quit)"
           test -n "$deb"
@@ -69,21 +73,26 @@ jobs:
           test "$(dpkg-deb --field "$deb" Package)" = "com.davidvilla7.fifa14localut"
           test "$(dpkg-deb --field "$deb" Architecture)" = "iphoneos-arm"
           dpkg-deb --contents "$deb" | tee dist/deb-contents.txt
-          cp "$deb" dist/FIFA14LocalUT_0.4.0_iphoneos-arm.deb
+          dylib_path="$(dpkg-deb --contents "$deb" | awk '/FIFA14LocalUT\.dylib$/ {print $NF; exit}')"
+          test -n "$dylib_path"
+          dpkg-deb --extract "$deb" "$RUNNER_TEMP/package-check"
+          file "$RUNNER_TEMP/package-check/$dylib_path" | tee dist/tweak-architecture.txt
+          grep -E 'Mach-O.*arm64.*dynamically linked shared library' dist/tweak-architecture.txt
+          cp "$deb" dist/FIFA14LocalUT_0.5.0_iphoneos-arm.deb
 
       - name: Publish experimental pre-release
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.4.0 \
+          gh release create v0.5.0 \
             --prerelease \
-            --title "FIFA 14 Local UT 0.4.0 (experimental)" \
-            --notes "Diagnostic ARMv7 MobileSubstrate tweak for FIFA 14 iOS. This build fixes the previous package's custom Logos constructor by explicitly initializing the hooks. It records tweak-load, Origin login callback, and Origin webview load/failure events to Documents/FIFA14LocalUT.log while retaining the experimental Origin callback bypass. It has NOT been validated on a physical iOS 10.3.3 device and does not provide a local FUT service or market database. Back up the app data before installing. Package target: jailbroken 32-bit iOS with MobileSubstrate." \
-            dist/FIFA14LocalUT_0.4.0_iphoneos-arm.deb
+            --title "FIFA 14 Local UT 0.5.0 (ARM64 experimental)" \
+            --notes "ARM64 diagnostic MobileSubstrate tweak for FIFA 14 iOS. This package is built for 64-bit devices such as iPod touch (6th generation), iPhone SE, and iPad Pro (2nd generation). It records tweak-load and Origin flow events to Documents/FIFA14LocalUT.log while retaining the experimental Origin callback bypass. This build has not yet been validated on a physical device and does not provide a local FUT service or market database. Back up app data before installing. The previous 0.4.0 package was ARMv7-only and cannot load in an ARM64 app process." \
+            dist/FIFA14LocalUT_0.5.0_iphoneos-arm.deb
 
       - name: Upload the package and build report
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
         with:
-          name: fifa14-local-ut-experimental-deb
+          name: fifa14-local-ut-arm64-experimental-deb
           path: dist/
