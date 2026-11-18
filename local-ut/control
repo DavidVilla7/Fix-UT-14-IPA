@@ -1,8 +1,8 @@
 Package: com.davidvilla7.fifa14localut
-Name: FIFA 14 Local UT (Origin bypass experiment)
-Version: 0.7.0
+Name: FIFA 14 Local UT (local auth state experiment)
+Version: 0.8.0
 Architecture: iphoneos-arm
-Description: ARMv7/ARM64 on-device Origin bypass and runtime logging experiment.
+Description: ARMv7/ARM64 on-device auth state transition and Origin bypass experiment.
 Maintainer: DavidVilla7
 Author: DavidVilla7
 Section: Tweaks
