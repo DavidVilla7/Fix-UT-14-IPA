@@ -9,6 +9,14 @@
 
 typedef void (^NimbleLoginCompletion)(id result, id error);
 
+// Declarations for selectors verified in FIFA14's runtime metadata.
+@interface NimbleIdentityAuthenticatorBase : NSObject
+- (void)setState:(int)state;
+@end
+@interface NimbleOriginCore : NSObject
+- (void)updateStatus:(int)status;
+@end
+
 static void FUTWriteLine(const char *path, const char *line) {
     int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (fd < 0) return;
