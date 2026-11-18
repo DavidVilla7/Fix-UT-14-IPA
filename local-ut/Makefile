@@ -1,6 +1,6 @@
 THEOS ?= $(CURDIR)/.theos
 TARGET := iphone:clang:9.2:7.0
-ARCHS := arm64
+ARCHS := armv7 arm64
 
 include $(THEOS)/makefiles/common.mk
 
