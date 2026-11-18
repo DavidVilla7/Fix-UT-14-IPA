@@ -1,40 +1,121 @@
 #import <Foundation/Foundation.h>
+#import <objc/runtime.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 typedef void (^NimbleLoginCompletion)(id result, id error);
 
+static void FUTWriteLine(const char *path, const char *line) {
+    int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd < 0) return;
+    size_t length = strlen(line);
+    while (length) {
+        ssize_t written = write(fd, line, length);
+        if (written <= 0) break;
+        line += written;
+        length -= (size_t)written;
+    }
+    close(fd);
+}
+
+// This runs without Objective-C/Foundation, so it proves whether dyld loaded
+// the tweak even if Logos or an app hook fails later.
+__attribute__((constructor(101)))
+static void FUTEarlyConstructor(void) {
+    char line[160];
+    snprintf(line, sizeof(line), "FIFA14LocalUT dylib constructor pid=%d\n", getpid());
+    FUTWriteLine("/tmp/FIFA14LocalUT.log", line);
+    FUTWriteLine("/var/mobile/Library/Logs/FIFA14LocalUT.log", line);
+}
+
 static void FUTLog(NSString *message) {
     @autoreleasepool {
-        NSLog(@"[FIFA14LocalUT] %@", message);
+        time_t now = time(NULL);
+        struct tm tmNow;
+        localtime_r(&now, &tmNow);
+        const char *text = [message UTF8String];
+        if (!text) text = "(message encoding failed)";
+        char line[2048];
+        snprintf(line, sizeof(line),
+                 "%04d-%02d-%02d %02d:%02d:%02d pid=%d %s\n",
+                 tmNow.tm_year + 1900, tmNow.tm_mon + 1, tmNow.tm_mday,
+                 tmNow.tm_hour, tmNow.tm_min, tmNow.tm_sec, getpid(), text);
+        FUTWriteLine("/tmp/FIFA14LocalUT.log", line);
+        FUTWriteLine("/var/mobile/Library/Logs/FIFA14LocalUT.log", line);
+
         NSString *documents = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"];
         NSString *path = [documents stringByAppendingPathComponent:@"FIFA14LocalUT.log"];
-        NSString *line = [NSString stringWithFormat:@"%@ %@\n", [NSDate date], message];
-        NSData *data = [line dataUsingEncoding:NSUTF8StringEncoding];
-        if (![[NSFileManager defaultManager] fileExistsAtPath:path]) {
-            [@"" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
-        }
-        NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:path];
-        if (handle) {
-            [handle seekToEndOfFile];
-            [handle writeData:data];
-            [handle closeFile];
-        }
+        FUTWriteLine([path fileSystemRepresentation], line);
+        NSLog(@"[FIFA14LocalUT] %@", message);
     }
 }
 
-// Keep the Origin bypass under test, while recording whether Substrate loaded
-// this tweak and which Origin webview/authentication methods the app reaches.
-%hook NimbleAuthenticatorOrigin
+static void FUTReportMethod(const char *className, const char *selectorName) {
+    Class cls = objc_getClass(className);
+    BOOL present = cls && class_getInstanceMethod(cls, sel_registerName(selectorName));
+    FUTLog([NSString stringWithFormat:@"runtime check %s -%s: %@",
+            className, selectorName, present ? @"present" : @"MISSING"]);
+}
 
-- (void)login:(id)loginType callback:(NimbleLoginCompletion)completion {
-    FUTLog(@"Origin login:callback: hook reached; returning (nil, nil)");
-    if (completion) {
-        completion(nil, nil);
-    }
+// These are the class names and selectors read from FIFA14's Objective-C
+// metadata. The old package targeted a class that does not exist in this app.
+%hook NimbleIdentityAuthenticatorBase
+
+- (void)setState:(int)state {
+    FUTLog([NSString stringWithFormat:@"Nimble authenticator setState:%d", state]);
+    %orig(state);
 }
 
 - (int)getState {
-    FUTLog(@"Origin getState hook reached");
+    int state = %orig;
+    FUTLog([NSString stringWithFormat:@"Nimble authenticator getState -> %d", state]);
+    return state;
+}
+
+%end
+
+%hook NimbleAuthenticatorAnonymous
+
+- (void)autoLogin {
+    FUTLog(@"Anonymous autoLogin reached; suppressing retired UPID token request");
+    // The only automatic login request in the supplied Nimble.log is the dead
+    // accounts.ea.com/connect/upidtoken exchange.
+}
+
+- (void)getUpidToken {
+    FUTLog(@"Anonymous getUpidToken reached; suppressed");
+}
+
+- (void)exchangeUpidTokenForAuthCode {
+    FUTLog(@"Anonymous exchangeUpidTokenForAuthCode reached; suppressed");
+}
+
+- (void)login:(id)loginType callback:(NimbleLoginCompletion)completion {
+    FUTLog(@"Anonymous login:callback: reached; invoking completion with no server result");
+    if (completion) completion(nil, nil);
+}
+
+%end
+
+%hook NimbleOriginCore
+
+- (BOOL)isOriginReady {
+    FUTLog(@"Origin isOriginReady forced YES for offline mode");
+    return YES;
+}
+
+- (int)getLoginStatus {
+    int status = %orig;
+    FUTLog([NSString stringWithFormat:@"Origin getLoginStatus was %d; reporting local-ready status 3", status]);
     return 3;
+}
+
+- (void)loadOrigin {
+    FUTLog(@"Origin loadOrigin suppressed for offline mode");
 }
 
 %end
@@ -52,24 +133,28 @@ static void FUTLog(NSString *message) {
 }
 
 - (void)webViewDidStartLoad:(id)webView {
-    FUTLog([NSString stringWithFormat:@"Origin webViewDidStartLoad: %@", webView]);
+    FUTLog(@"Origin webview did start load");
     %orig(webView);
 }
 
 - (void)webViewDidFinishLoad:(id)webView {
-    FUTLog([NSString stringWithFormat:@"Origin webViewDidFinishLoad: %@", webView]);
+    FUTLog(@"Origin webview did finish load");
     %orig(webView);
 }
 
 - (void)webView:(id)webView didFailLoadWithError:(NSError *)error {
-    FUTLog([NSString stringWithFormat:@"Origin webView didFailLoadWithError: %@", error]);
+    FUTLog([NSString stringWithFormat:@"Origin webview failed: %@", error]);
     %orig(webView, error);
 }
 
 %end
 
 %ctor {
-    FUTLog(@"Tweak constructor entered");
+    FUTLog(@"Logos constructor entered");
+    FUTReportMethod("NimbleIdentityAuthenticatorBase", "getState");
+    FUTReportMethod("NimbleAuthenticatorAnonymous", "autoLogin");
+    FUTReportMethod("NimbleOriginCore", "getLoginStatus");
+    FUTReportMethod("NimbleOriginWebController", "loadBootstrap");
     %init;
     FUTLog(@"Logos hooks initialized");
 }
